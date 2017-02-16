@@ -1,11 +1,14 @@
 package com.soccar.mlisc.soccarappgit.model;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Created by mlisc on 16.02.2017.
  */
 
 public class Team {
 
+    @SerializedName("team")
     private String name;
     private int played;
     private int win;
