@@ -17,4 +17,22 @@
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
+
+<!-- Base application theme. -->
+<style name="PremierLAppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <!-- Customize your theme here. -->
+    <item name="colorPrimary">@color/colorPrimaryPL</item>
+    <item name="colorPrimaryDark">@color/colorPrimaryDarkPL</item>
+    <item name="colorAccent">@color/colorAccentPL</item>
+</style>
+
+<style name="AppTheme.NoActionBarPL">
+    <item name="windowActionBar">false</item>
+    <item name="windowNoTitle">true</item>
+</style>
+
+<style name="AppTheme.AppBarOverlayPL" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+<style name="AppTheme.PopupOverlayPL" parent="ThemeOverlay.AppCompat.Light" />
+
 </resources>

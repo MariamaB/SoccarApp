@@ -9,6 +9,8 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,17 +20,7 @@ import com.google.android.gms.appindexing.Action;
 import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.soccar.mlisc.soccarappgit.model.Records;
-import com.soccar.mlisc.soccarappgit.model.Team;
-
-import java.util.List;
-
-import retrofit2.Call;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
-import retrofit2.http.GET;
-import retrofit2.http.Header;
+import com.soccar.mlisc.soccarappgit.requests.SoccarRequests;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -38,6 +30,7 @@ public class MainActivity extends AppCompatActivity
      * See https://g.co/AppIndexing/AndroidStudio for more information.
      */
     private GoogleApiClient client;
+    private SoccarRequests soccarRequests;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +38,16 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+
+        final RecyclerView rv = (RecyclerView)findViewById(R.id.rv);
+        rv.setHasFixedSize(true);
+
+
+        LinearLayoutManager llm = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        rv.setLayoutManager(llm);
+
+
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -69,7 +72,8 @@ public class MainActivity extends AppCompatActivity
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
 
-        this.RetrofitRequest();
+        soccarRequests = new SoccarRequests();
+        soccarRequests.RetrofitRequest();
     }
 
     @Override
@@ -130,48 +134,6 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-    public interface TableRequestService {
-
-        @GET("/api/premierleague/table?mode=home&season=2016-17")
-        Call<Records> getTeams(@Header("X-Mashape-Key") String key, @Header("Accept") String accept);
-    }
-
-
-    public void RetrofitRequest() {
-        String BASE_URL = "https://heisenbug-premier-league-live-scores-v1.p.mashape.com";
-        Retrofit retrofit = null;
-
-        if (retrofit == null) {
-            retrofit = new Retrofit.Builder()
-                    .baseUrl(BASE_URL)
-                    .addConverterFactory(GsonConverterFactory.create())
-                    .build();
-        }
-
-        TableRequestService service = retrofit.create(TableRequestService.class);
-
-        Call<Records> teamTabelCall = service.getTeams("GIuHYh8MiBmshEyEHYblQyxd4kuOp1vPkZAjsn9K8Wjr4ebNxY", "application/json");
-
-        teamTabelCall.enqueue(new retrofit2.Callback<Records>() {
-            @Override
-            public void onResponse(Call<Records> call, Response<Records> response) {
-
-                List<Team> teamsList = (List<Team>) response.body().teamsList;
-
-
-//                System.out.println(teamsList.get(1));
-
-            }
-
-            @Override
-            public void onFailure(Call<Records> call, Throwable t) {
-                System.out.println("Failurrrrree!!!: " + t);
-            }
-        });
-
-
-    }
-
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
      * See https://g.co/AppIndexing/AndroidStudio for more information.
@@ -207,4 +169,5 @@ public class MainActivity extends AppCompatActivity
         AppIndex.AppIndexApi.end(client, getIndexApiAction());
         client.disconnect();
     }
+
 }
