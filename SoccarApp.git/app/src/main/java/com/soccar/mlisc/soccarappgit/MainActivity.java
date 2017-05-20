@@ -12,15 +12,32 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
 import com.google.android.gms.appindexing.Action;
 import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.soccar.mlisc.soccarappgit.requests.SoccarRequests;
+import com.j256.ormlite.android.apptools.OpenHelperManager;
+import com.j256.ormlite.dao.Dao;
+import com.soccar.mlisc.soccarappgit.ViewAdapter.RVAdapter;
+import com.soccar.mlisc.soccarappgit.database.DatabaseOperations;
+import com.soccar.mlisc.soccarappgit.model.Records;
+import com.soccar.mlisc.soccarappgit.model.Team;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.http.GET;
+import retrofit2.http.Header;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -30,7 +47,6 @@ public class MainActivity extends AppCompatActivity
      * See https://g.co/AppIndexing/AndroidStudio for more information.
      */
     private GoogleApiClient client;
-    private SoccarRequests soccarRequests;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +60,7 @@ public class MainActivity extends AppCompatActivity
         rv.setHasFixedSize(true);
 
 
-        LinearLayoutManager llm = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        LinearLayoutManager llm = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
         rv.setLayoutManager(llm);
 
 
@@ -72,9 +88,130 @@ public class MainActivity extends AppCompatActivity
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
 
-        soccarRequests = new SoccarRequests();
-        soccarRequests.RetrofitRequest();
+        this.RetrofitRequest();
+
+        DatabaseOperations helper = OpenHelperManager.getHelper(this, DatabaseOperations.class);
+
+        try {
+            Dao<Team, Integer> teamdao = helper.getTeamDao();
+            List<Team> teamList = teamdao.queryForAll();
+            if(teamList == null){
+                restControllerRequest();
+
+            }
+            Log.d("Database call ", teamList.toString());
+            RVAdapter rvAdapter = new RVAdapter(teamList, this);
+            rv.setAdapter(rvAdapter);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
+
+
+
+
+    private void insertData(List<Team> teamList) {
+//            this.deleteDatabase("soccar_app.db");
+            Team team;
+
+            DatabaseOperations db = new DatabaseOperations(this);
+            Dao<Team, Integer> teamDao = null;
+
+            try {
+                teamDao = db.getTeamDao();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            for (int i = 0; i < teamList.size(); i++) {
+                team = teamList.get(i);
+                try {
+                    teamDao.create(team);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            Toast.makeText(getBaseContext(), "Data was inserted", Toast.LENGTH_LONG).show();
+            Log.d("InsertData() ", "Data was inserted");
+        }
+
+    public void RetrofitRequest() {
+        String BASE_URL = "https://heisenbug-premier-league-live-scores-v1.p.mashape.com";
+        Retrofit retrofit = null;
+
+        if (retrofit == null) {
+            retrofit = new Retrofit.Builder()
+                    .baseUrl(BASE_URL)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build();
+        }
+
+        TableRequestService service = retrofit.create(TableRequestService.class);
+
+        Call<Records> teamTabelCall = service.getTeams("GIuHYh8MiBmshEyEHYblQyxd4kuOp1vPkZAjsn9K8Wjr4ebNxY", "application/json");
+
+        teamTabelCall.enqueue(new retrofit2.Callback<Records>() {
+            @Override
+            public void onResponse(Call<Records> call, Response<Records> response) {
+                List<Team> teamsList;
+                teamsList = (List<Team>) response.body().teamsList;
+//                insertData(teamsList);
+//                for(int i = 0; i < teamsList.size(); i++){
+//                    Log.d("ResponseBody LIST: ",teamsList.get(i).toString());
+//                }
+            }
+
+            @Override
+            public void onFailure(Call<Records> call, Throwable t) {
+                System.out.println("Failurrrrree!!!: " + t);
+            }
+        });
+    }
+
+    public void restControllerRequest() {
+
+        String BASE_URL = "http://192.168.2.111:8085";
+        Retrofit retrofit = null;
+
+        if (retrofit == null) {
+            retrofit = new Retrofit.Builder()
+                    .baseUrl(BASE_URL)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build();
+        }
+
+        TableRequestService service = retrofit.create(TableRequestService.class);
+
+        Call<Records> teamTabelCall = service.getTeamByRest();
+        teamTabelCall.enqueue(new retrofit2.Callback<Records>() {
+            @Override
+            public void onResponse(Call<Records> call, Response<Records> response) {
+                List<Team> teamsList;
+                teamsList = (List<Team>) response.body().teamsList;
+//                insertData(teamsList);
+                Log.d("ResponseBody: ",teamsList.toString());
+
+            }
+
+            @Override
+            public void onFailure(Call<Records> call, Throwable t) {
+                System.out.println("Failurrrrree!!!: " + t);
+            }
+        });
+    }
+
+    public interface TableRequestService {
+
+        @GET("/api/premierleague/table?mode=home&season=2016-17")
+        Call<Records> getTeams(@Header("X-Mashape-Key") String key, @Header("Accept") String accept);
+
+        @GET("/t")
+        Call<Records> getTeamByRest();
+    }
+
+
+
 
     @Override
     public void onBackPressed() {
@@ -169,5 +306,6 @@ public class MainActivity extends AppCompatActivity
         AppIndex.AppIndexApi.end(client, getIndexApiAction());
         client.disconnect();
     }
+
 
 }
